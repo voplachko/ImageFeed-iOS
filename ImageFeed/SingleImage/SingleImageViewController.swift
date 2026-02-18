@@ -38,13 +38,22 @@ final class SingleImageViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        configureScrollView()
+        configureImageIfNeeded()
+    }
+    
+    private func configureScrollView() {
         scrollView.minimumZoomScale = 0.1
         scrollView.maximumZoomScale = 1.25
-        
         scrollView.alwaysBounceVertical = true
         scrollView.alwaysBounceHorizontal = true
+        scrollView.delegate = self
+    }
 
+    private func configureImageIfNeeded() {
         guard let image else { return }
+        
         imageView.image = image
         imageView.frame.size = image.size
         rescaleAndCenterImageInScrollView(image: image)
@@ -60,17 +69,27 @@ final class SingleImageViewController: UIViewController {
     private func rescaleAndCenterImageInScrollView(image: UIImage) {
         view.layoutIfNeeded()
         
-        recalcFitWidthScaleIfPossible()
-        
-        let minZoomScale = scrollView.minimumZoomScale
-        let maxZoomScale = scrollView.maximumZoomScale
-        
-        let visibleRectSize = scrollView.bounds.size
+        let visibleSize = scrollView.bounds.size
         let imageSize = image.size
         
-        let hScale = visibleRectSize.width / imageSize.width
-        let vScale = visibleRectSize.height / imageSize.height
-        let scale = min(maxZoomScale, max(minZoomScale, min(hScale, vScale)))
+        guard
+            imageSize.width > 0,
+            imageSize.height > 0,
+            visibleSize.width > 0,
+            visibleSize.height > 0
+        else {
+            return
+        }
+        
+        recalcFitWidthScaleIfPossible()
+        
+        let hScale = visibleSize.width / imageSize.width
+        let vScale = visibleSize.height / imageSize.height
+        
+        let scale = min(
+            scrollView.maximumZoomScale,
+            max(scrollView.minimumZoomScale, min(hScale, vScale))
+        )
         
         scrollView.setZoomScale(scale, animated: false)
         scrollView.layoutIfNeeded()
@@ -79,13 +98,20 @@ final class SingleImageViewController: UIViewController {
     }
     
     private func recalcFitWidthScaleIfPossible() {
-        guard let image else { return }
+        guard
+            let image,
+            image.size.width > 0,
+            scrollView.bounds.width > 0
+        else {
+            fitWidthScale = scrollView.minimumZoomScale
+            return
+        }
+        
         let visibleWidth = scrollView.bounds.width
         let imageWidth = image.size.width
-        guard imageWidth > 0, visibleWidth > 0 else { return }
         
-        fitWidthScale = visibleWidth / imageWidth
-        fitWidthScale = min(fitWidthScale, scrollView.maximumZoomScale)
+        let scale = visibleWidth / imageWidth
+        fitWidthScale = min(scale, scrollView.maximumZoomScale)
     }
     
     private func updateContentInsetForCentering() {
