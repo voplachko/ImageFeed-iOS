@@ -12,7 +12,7 @@ final class ProfileViewController: UIViewController {
     // MARK: - UI
     
     private let profileImageView: UIImageView = {
-        let imageView = UIImageView(image: UIImage(named: "tyler"))
+        let imageView = UIImageView(image: UIImage(resource: .tyler))
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.clipsToBounds = true
         imageView.layer.cornerRadius = 35
@@ -24,7 +24,7 @@ final class ProfileViewController: UIViewController {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setImage(
-            UIImage(named: "exit_button")?
+            UIImage(resource: .exitButton)
                 .withRenderingMode(.alwaysOriginal),
             for: .normal
         )
@@ -112,9 +112,9 @@ extension ProfileViewController {
     }
     
     func configureContent() {
-        nameLabel.text = "Tyler Durden"
-        nicknameLabel.text = "@tylerdurden"
-        descriptionLabel.text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec vitae justo eget elit viverra rutrum..."
+        nameLabel.text = Strings.tylerName
+        nicknameLabel.text = Strings.tylerNickname
+        descriptionLabel.text = Strings.profileDescription
     }
     
     func setupActions() {
@@ -124,5 +124,6 @@ extension ProfileViewController {
     @objc
     private func didTapExitButton() {
         print("Exit tapped")
+        // TODO: добавить действие в следующем спринте
     }
 }
