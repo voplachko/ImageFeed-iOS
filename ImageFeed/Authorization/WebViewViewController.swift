@@ -30,7 +30,10 @@ final class WebViewViewController: UIViewController {
     }
     
     private func loadAuthView() {
-        guard var urlComponents = URLComponents(string: WebViewConstants.unsplashAuthorizeURLString) else { return }
+        guard var urlComponents = URLComponents(string: WebViewConstants.unsplashAuthorizeURLString) else {
+            print("[WebView] ❌ Failed to create URLComponents for authorize URL")
+            return
+        }
         
         urlComponents.queryItems = [
             URLQueryItem(name: "client_id", value: APIConstants.accessKey),
@@ -39,7 +42,10 @@ final class WebViewViewController: UIViewController {
             URLQueryItem(name: "scope", value: APIConstants.accessScope)
         ]
         
-        guard let url = urlComponents.url else { return }
+        guard let url = urlComponents.url else {
+            print("[WebView] ❌ Failed to create authorize URL")
+            return
+        }
         
         let request = URLRequest(url: url)
         webView.load(request)

@@ -7,6 +7,15 @@
 
 import Foundation
 
+enum OAuth2ServiceError: Error {
+    case invalidURLComponents
+    case invalidURL
+    case invalidRequest
+    case httpStatusCode(Int)
+    case emptyResponseData
+    case decodingError(Error)
+}
+
 final class OAuth2Service {
     static let shared = OAuth2Service()
     
@@ -17,6 +26,7 @@ final class OAuth2Service {
     
     private func makeOAuthTokenRequest(code: String) -> URLRequest? {
         guard var urlComponents = URLComponents(string: "https://unsplash.com/oauth/token") else {
+            print("[OAuth2Service] ❌ Failed to create URLComponents")
             return nil
         }
         
@@ -29,8 +39,11 @@ final class OAuth2Service {
         ]
         
         guard let authTokenURL = urlComponents.url else {
+            print("[OAuth2Service] ❌ Failed to create URL from URLComponents")
             return nil
         }
+        
+        print("[OAuth2Service] ✅ OAuth token URL: \(authTokenURL)")
         
         var request = URLRequest(url: authTokenURL)
         request.httpMethod = "POST"
@@ -42,50 +55,70 @@ final class OAuth2Service {
         completion: @escaping (Result<String, Error>) -> Void
     ) {
         guard let request = makeOAuthTokenRequest(code: code) else {
-            completion(.failure(NSError(domain: "InvalidRequest", code: 0)))
+            print("[OAuth2Service] ❌ Invalid request (makeOAuthTokenRequest returned nil)")
+            DispatchQueue.main.async {
+                completion(.failure(OAuth2ServiceError.invalidRequest))
+            }
             return
         }
         
-        let task = urlSession.dataTask(with: request) { data, response, error in
+        let task = urlSession.dataTask(with: request) { [weak self] data, response, error in
             if let error {
+                print("[OAuth2Service] ❌ Network error: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
                 return
             }
             
-            guard
-                let data = data,
-                let httpResponse = response as? HTTPURLResponse,
-                200..<300 ~= httpResponse.statusCode
-            else {
-                if let httpResponse = response as? HTTPURLResponse {
-                    print("OAuth status code: \(httpResponse.statusCode)")
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("[OAuth2Service] ❌ No HTTPURLResponse")
+                DispatchQueue.main.async {
+                    completion(.failure(OAuth2ServiceError.emptyResponseData))
                 }
+                return
+            }
+            
+            let statusCode = httpResponse.statusCode
+            
+            guard 200..<300 ~= statusCode else {
+                print("[OAuth2Service] ❌ HTTP status code: \(statusCode)")
                 
-                if let data = data, let body = String(data: data, encoding: .utf8) {
-                    print("OAuth token response body: \(body)")
+                if let data, let body = String(data: data, encoding: .utf8) {
+                    print("[OAuth2Service] ❌ Response body: \(body)")
+                } else {
+                    print("[OAuth2Service] ❌ Response body is empty or not utf8")
                 }
                 
                 DispatchQueue.main.async {
-                    completion(.failure(NSError(domain: "InvalidResponse", code: 0)))
+                    completion(.failure(OAuth2ServiceError.httpStatusCode(statusCode)))
+                }
+                return
+            }
+            
+            guard let data else {
+                print("[OAuth2Service] ❌ Empty data with success status code: \(statusCode)")
+                DispatchQueue.main.async {
+                    completion(.failure(OAuth2ServiceError.emptyResponseData))
                 }
                 return
             }
             
             do {
-                let decoder = JSONDecoder()
-                let tokenResponse = try decoder.decode(OAuth2TokenResponse.self, from: data)
-                
+                let tokenResponse = try JSONDecoder().decode(OAuth2TokenResponse.self, from: data)
                 let token = tokenResponse.accessToken
-                self.tokenStorage.token = token
+                self?.tokenStorage.token = token
                 
                 DispatchQueue.main.async {
                     completion(.success(token))
                 }
             } catch {
+                print("[OAuth2Service] ❌ Decoding error: \(error)")
+                if let body = String(data: data, encoding: .utf8) {
+                    print("[OAuth2Service] ❌ Raw response for debugging: \(body)")
+                }
                 DispatchQueue.main.async {
-                    completion(.failure(error))
+                    completion(.failure(OAuth2ServiceError.decodingError(error)))
                 }
             }
         }
