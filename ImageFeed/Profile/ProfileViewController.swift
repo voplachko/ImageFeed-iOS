@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Kingfisher
 
 final class ProfileViewController: UIViewController {
     
@@ -56,6 +57,8 @@ final class ProfileViewController: UIViewController {
         return label
     }()
     
+    private var profileImageServiceObserver: NSObjectProtocol?
+    
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
@@ -66,6 +69,13 @@ final class ProfileViewController: UIViewController {
         setupConstraints()
         configureContent()
         setupActions()
+        updateAvatar()
+    }
+    
+    deinit {
+        if let profileImageServiceObserver {
+            NotificationCenter.default.removeObserver(profileImageServiceObserver)
+        }
     }
 }
 
@@ -111,14 +121,64 @@ extension ProfileViewController {
         ])
     }
     
+    private func updateProfileDetails(profile: Profile) {
+        nameLabel.text = profile.name.isEmpty
+        ? "Имя не указано"
+        : profile.name
+        nicknameLabel.text = profile.loginName.isEmpty
+        ? "@unknown_user"
+        : profile.loginName
+        descriptionLabel.text = (profile.bio?.isEmpty ?? true)
+        ? "Профиль не заполнен"
+        : profile.bio
+    }
+    
     func configureContent() {
-        nameLabel.text = Strings.tylerName
-        nicknameLabel.text = Strings.tylerNickname
-        descriptionLabel.text = Strings.profileDescription
+        guard let profile = ProfileService.shared.profile else {
+            print("[ProfileViewController] ❌ No profile data")
+            return
+        }
+        
+        updateProfileDetails(profile: profile)
     }
     
     func setupActions() {
         exitButton.addTarget(self, action: #selector(didTapExitButton), for: .touchUpInside)
+    }
+    
+    private func updateAvatar() {
+        guard
+            let profileImageURL = ProfileImageService.shared.avatarURL,
+            let imageUrl = URL(string: profileImageURL)
+        else { return }
+        
+        print("imageUrl: \(imageUrl)")
+        
+        let placeholderImage = UIImage(systemName: "person.crop.circle")?
+            .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
+            .withConfiguration(UIImage.SymbolConfiguration(pointSize: 70, weight: .regular, scale: .large))
+        
+        let processor = RoundCornerImageProcessor(cornerRadius: 35)
+        profileImageView.kf.indicatorType = .activity
+        profileImageView.kf.setImage(
+            with: imageUrl,
+            placeholder: placeholderImage,
+            options: [
+                .processor(processor),
+                .scaleFactor(UIScreen.main.scale),
+                .cacheOriginalImage,
+                .forceRefresh
+            ]) { result in
+
+                switch result {
+                case .success(let value):
+                    print(value.image)
+                    print(value.cacheType)
+                    print(value.source)
+                case .failure(let error):
+                    print(error)
+                }
+            }
     }
     
     @objc
