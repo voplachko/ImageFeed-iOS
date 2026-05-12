@@ -36,17 +36,13 @@ final class SplashViewController: UIViewController {
         if let token = storage.token {
             fetchProfile(token: token)
         } else {
-            let storyboard = UIStoryboard(name: "Main", bundle: .main)
-            guard let viewController = storyboard.instantiateViewController(
-                withIdentifier: "AuthViewController"
-            ) as? AuthViewController else {
-                assertionFailure("Unable to instantiate AuthViewController")
-                return
-            }
-            
-            viewController.delegate = self
-            viewController.modalPresentationStyle = .fullScreen
-            present(viewController, animated: true)
+            let authViewController = AuthViewController()
+            authViewController.delegate = self
+
+            let navigationController = UINavigationController(rootViewController: authViewController)
+            navigationController.modalPresentationStyle = .fullScreen
+
+            present(navigationController, animated: true)
         }
     }
 }

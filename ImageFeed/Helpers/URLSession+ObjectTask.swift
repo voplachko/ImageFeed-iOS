@@ -7,25 +7,6 @@
 
 import Foundation
 
-enum NetworkError: Error {
-    case httpStatusCode(Int)
-    case urlRequestError(Error)
-    case urlSessionError
-}
-
-extension NetworkError: CustomStringConvertible {
-    var description: String {
-        switch self {
-        case let .httpStatusCode(code):
-            return "NetworkError - код ошибки \(code)"
-        case let .urlRequestError(error):
-            return "NetworkError - urlRequestError: \(error.localizedDescription)"
-        case .urlSessionError:
-            return "NetworkError - urlSessionError"
-        }
-    }
-}
-
 extension URLSession {
     func data(
         for request: URLRequest,
@@ -38,26 +19,40 @@ extension URLSession {
         }
 
         let task = dataTask(with: request) { data, response, error in
-            if let data,
-               let response = response,
-               let statusCode = (response as? HTTPURLResponse)?.statusCode
-            {
-                if 200 ..< 300 ~= statusCode {
-                    fulfillCompletionOnTheMainThread(.success(data))
-                } else {
-                    let networkError = NetworkError.httpStatusCode(statusCode)
-                    print("[data(for:)]: \(networkError)")
-                    fulfillCompletionOnTheMainThread(.failure(networkError))
-                }
-            } else if let error {
+            // Если пришла ошибка уровня URLSession — сразу пробрасываем
+            if let error {
                 let networkError = NetworkError.urlRequestError(error)
                 print("[data(for:)]: \(networkError)")
                 fulfillCompletionOnTheMainThread(.failure(networkError))
-            } else {
+                return
+            }
+
+            // Проверяем, что есть HTTPURLResponse
+            guard let httpResponse = response as? HTTPURLResponse else {
                 let networkError = NetworkError.urlSessionError
                 print("[data(for:)]: \(networkError)")
                 fulfillCompletionOnTheMainThread(.failure(networkError))
+                return
             }
+
+            // Проверяем, что есть данные
+            guard let data else {
+                let networkError = NetworkError.urlSessionError
+                print("[data(for:)]: \(networkError)")
+                fulfillCompletionOnTheMainThread(.failure(networkError))
+                return
+            }
+
+            // Проверяем статус-код
+            guard (200..<300).contains(httpResponse.statusCode) else {
+                let networkError = NetworkError.httpStatusCode(httpResponse.statusCode)
+                print("[data(for:)]: \(networkError)")
+                fulfillCompletionOnTheMainThread(.failure(networkError))
+                return
+            }
+
+            // Успех
+            fulfillCompletionOnTheMainThread(.success(data))
         }
 
         return task
@@ -89,4 +84,3 @@ extension URLSession {
         return task
     }
 }
-

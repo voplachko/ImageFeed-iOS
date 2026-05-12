@@ -9,36 +9,68 @@ import UIKit
 import WebKit
 
 enum WebViewConstants {
-    static let unsplashAuthorizeURLString = "https://unsplash.com/oauth/authorize"
+    static let unSplashAuthorizeURLString = "https://unsplash.com/oauth/authorize"
 }
 
 final class WebViewViewController: UIViewController {
     
-    weak var delegate: WebViewViewControllerDelegate?
+    // MARK: - IBOutlets
     
+    @IBOutlet private weak var webView: WKWebView!
+    @IBOutlet private weak var progressView: UIProgressView!
+    
+    // MARK: - Properties
+    
+    weak var delegate: WebViewViewControllerDelegate?
     private var estimatedProgressObservation: NSKeyValueObservation?
     
-    @IBOutlet private var webView: WKWebView!
-    @IBOutlet private var progressView: UIProgressView!
+    // MARK: - Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        webView.navigationDelegate = self
-        
-        estimatedProgressObservation = webView.observe(
-            \.estimatedProgress,
-             options: [.new]
-        ) { [weak self] _, _ in
-            self?.updateProgress()
-        }
+        setupWebView()
+        setupProgressObservation()
         
         loadAuthView()
         updateProgress()
     }
     
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        updateProgress()
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+    }
+    
+    // MARK: - Setup
+
+    private func setupWebView() {
+        webView.navigationDelegate = self
+    }
+
+    private func setupProgressObservation() {
+        estimatedProgressObservation = webView.observe(
+            \.estimatedProgress,
+            options: [.new]
+        ) { [weak self] _, _ in
+            self?.updateProgress()
+        }
+    }
+    
+    // MARK: - Actions
+    
+    @IBAction private func didTapBackButton(_ sender: Any?) {
+        delegate?.webViewViewControllerDidCancel(self)
+    }
+    
+    // MARK: - Private Methods
+    
     private func loadAuthView() {
-        guard var urlComponents = URLComponents(string: WebViewConstants.unsplashAuthorizeURLString) else {
+        guard var urlComponents = URLComponents(string: WebViewConstants.unSplashAuthorizeURLString) else {
             print("[WebView] ❌ Failed to create URLComponents for authorize URL")
             return
         }
@@ -57,20 +89,6 @@ final class WebViewViewController: UIViewController {
         
         let request = URLRequest(url: url)
         webView.load(request)
-    }
-    
-    @IBAction private func didTapBackButton(_ sender: Any?) {
-        delegate?.webViewViewControllerDidCancel(self)
-    }
-    
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        updateProgress()
-    }
-    
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
     }
     
     private func updateProgress() {

@@ -7,17 +7,6 @@
 
 import Foundation
 
-enum OAuth2ServiceError: Error {
-    case invalidURLComponents
-    case invalidURL
-    case invalidRequest
-    case httpStatusCode(Int)
-    case emptyResponseData
-    case decodingError(Error)
-    case requestInProgress
-    case requestCancelled
-}
-
 final class OAuth2Service {
     static let shared = OAuth2Service()
     
