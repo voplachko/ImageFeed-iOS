@@ -59,6 +59,8 @@ final class ProfileViewController: UIViewController {
     
     private var profileImageServiceObserver: NSObjectProtocol?
     
+    private var gradientViews: [AnimatedGradientView] = []
+    
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
@@ -67,9 +69,21 @@ final class ProfileViewController: UIViewController {
         configureView()
         addSubviews()
         setupConstraints()
+
+        view.layoutIfNeeded()
+        showLoadingAnimation()
+
         configureContent()
         setupActions()
         updateAvatar()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        gradientViews.forEach {
+            $0.startAnimation()
+        }
     }
     
     deinit {
@@ -169,7 +183,9 @@ extension ProfileViewController {
                 .cacheOriginalImage,
                 .forceRefresh
             ]) { result in
-
+                
+                self.hideLoadingAnimation()
+                
                 switch result {
                 case .success(let value):
                     print(value.image)
@@ -183,7 +199,57 @@ extension ProfileViewController {
     
     @objc
     private func didTapExitButton() {
-        print("Exit tapped")
-        // TODO: добавить действие в следующем спринте
+        let alert = UIAlertController(
+            title: "Пока, пока!",
+            message: "Уверены, что хотите выйти?",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Да", style: .destructive) { _ in
+            ProfileLogoutService.shared.logout()
+            
+            guard let window = UIApplication.shared.windows.first else {
+                return
+            }
+            
+            let splashViewController = SplashViewController()
+            window.rootViewController = splashViewController
+        })
+        
+        alert.addAction(UIAlertAction(title: "Нет", style: .cancel))
+        
+        present(alert, animated: true)
+    }
+    
+    private func showLoadingAnimation() {
+        addGradient(to: profileImageView, cornerRadius: 35)
+        addGradient(to: nameLabel, cornerRadius: 8)
+        addGradient(to: nicknameLabel, cornerRadius: 6)
+        addGradient(to: descriptionLabel, cornerRadius: 6)
+    }
+
+    private func addGradient(to view: UIView, cornerRadius: CGFloat) {
+        let gradientView = AnimatedGradientView(frame: view.bounds)
+        gradientView.translatesAutoresizingMaskIntoConstraints = false
+        gradientView.layer.cornerRadius = cornerRadius
+
+        view.addSubview(gradientView)
+
+        NSLayoutConstraint.activate([
+            gradientView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            gradientView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            gradientView.topAnchor.constraint(equalTo: view.topAnchor),
+            gradientView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+
+        gradientViews.append(gradientView)
+    }
+
+    private func hideLoadingAnimation() {
+        gradientViews.forEach {
+            $0.stopAnimation()
+            $0.removeFromSuperview()
+        }
+        gradientViews.removeAll()
     }
 }

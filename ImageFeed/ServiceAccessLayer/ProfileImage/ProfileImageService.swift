@@ -68,4 +68,10 @@ final class ProfileImageService {
         request.setValue("v1", forHTTPHeaderField: "Accept-Version")
         return request
     }
+    
+    func reset() {
+        task?.cancel()
+        task = nil
+        avatarURL = nil
+    }
 }

@@ -6,21 +6,16 @@
 //
 
 import UIKit
+import Kingfisher
 
 final class SingleImageViewController: UIViewController {
-    var image: UIImage? {
-        didSet {
-            guard isViewLoaded, let image else { return }
-            
-            imageView.image = image
-            imageView.frame.size = image.size
-            rescaleAndCenterImageInScrollView(image: image)
-        }
-    }
+    
+    var fullImageURL: URL?
     
     @IBOutlet var imageView: UIImageView!
     @IBOutlet var scrollView: UIScrollView!
     
+    private var image: UIImage?
     private var fitWidthScale: CGFloat = 0.1
     
     @IBAction private func didTapBackButton(_ sender: UIButton)  {
@@ -40,7 +35,7 @@ final class SingleImageViewController: UIViewController {
         super.viewDidLoad()
         
         configureScrollView()
-        configureImageIfNeeded()
+        loadImage()
     }
     
     private func configureScrollView() {
@@ -50,13 +45,47 @@ final class SingleImageViewController: UIViewController {
         scrollView.alwaysBounceHorizontal = true
         scrollView.delegate = self
     }
-
-    private func configureImageIfNeeded() {
-        guard let image else { return }
+    
+    private func loadImage() {
+        guard let fullImageURL else { return }
         
-        imageView.image = image
-        imageView.frame.size = image.size
-        rescaleAndCenterImageInScrollView(image: image)
+        UIBlockingProgressHUD.show()
+        
+        imageView.kf.setImage(with: fullImageURL) { [weak self] result in
+            UIBlockingProgressHUD.dismiss()
+            
+            guard let self else { return }
+            
+            switch result {
+            case .success(let imageResult):
+                let image = imageResult.image
+                self.image = image
+                
+                self.imageView.image = image
+                self.imageView.frame.size = image.size
+                
+                self.rescaleAndCenterImageInScrollView(image: image)
+                
+            case .failure:
+                self.showError()
+            }
+        }
+    }
+    
+    private func showError() {
+        let alert = UIAlertController(
+            title: "Что-то пошло не так",
+            message: "Попробовать ещё раз?",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Не надо", style: .cancel))
+        
+        alert.addAction(UIAlertAction(title: "Повторить", style: .default) { [weak self] _ in
+            self?.loadImage()
+        })
+        
+        present(alert, animated: true)
     }
     
     override func viewDidLayoutSubviews() {

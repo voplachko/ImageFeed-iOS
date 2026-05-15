@@ -78,6 +78,12 @@ final class ProfileService {
         self.task = currentTask
         currentTask?.resume()
     }
+    
+    func reset() {
+        task?.cancel()
+        task = nil
+        profile = nil
+    }
 }
 
 private extension ProfileService {
