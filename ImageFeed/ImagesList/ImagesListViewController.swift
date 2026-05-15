@@ -19,8 +19,6 @@ final class ImagesListViewController: UIViewController {
     
     private lazy var dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        // Для диагностики можно раскомментировать фиксированный формат:
-        // formatter.dateFormat = "d MMM yyyy"
         formatter.dateStyle = .long
         formatter.timeStyle = .none
         return formatter
