@@ -20,16 +20,23 @@ struct Photo {
 }
 
 extension Photo {
+    private static let isoWithFraction: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let isoNoFraction: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
     init(from result: PhotoResult) {
-        let isoWithFraction = ISO8601DateFormatter()
-        isoWithFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-        let isoNoFraction = ISO8601DateFormatter()
-        isoNoFraction.formatOptions = [.withInternetDateTime]
-
         self.id = result.id
         self.size = CGSize(width: result.width, height: result.height)
-        self.createdAt = isoWithFraction.date(from: result.createdAt) ?? isoNoFraction.date(from: result.createdAt)
+        self.createdAt = Photo.isoWithFraction.date(from: result.createdAt)
+            ?? Photo.isoNoFraction.date(from: result.createdAt)
         self.welcomeDescription = result.description
         self.thumbImageURL = result.urls.thumb
         self.largeImageURL = result.urls.full

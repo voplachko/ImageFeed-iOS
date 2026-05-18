@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Kingfisher
 
 final class ImagesListCell: UITableViewCell {
     static let reuseIdentifier = "ImagesListCell"
@@ -20,7 +21,8 @@ final class ImagesListCell: UITableViewCell {
     
     override func prepareForReuse() {
         super.prepareForReuse()
-        
+
+        cellImage.kf.cancelDownloadTask()
         cellImage.image = nil
         dateLabel.text = nil
         hideGradient()
@@ -46,7 +48,10 @@ final class ImagesListCell: UITableViewCell {
             
         case .error:
             hideGradient()
-            cellImage.image = UIImage(named: "placeholder")
+            let placeholderImage = UIImage(systemName: "person.crop.circle")?
+                .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
+                .withConfiguration(UIImage.SymbolConfiguration(pointSize: 70, weight: .regular, scale: .large))
+            cellImage.image = placeholderImage
             
         case .finished(let image):
             hideGradient()

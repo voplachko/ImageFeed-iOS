@@ -8,10 +8,6 @@
 import UIKit
 import WebKit
 
-enum WebViewConstants {
-    static let unSplashAuthorizeURLString = "https://unsplash.com/oauth/authorize"
-}
-
 final class WebViewViewController: UIViewController {
     
     // MARK: - IBOutlets
@@ -70,16 +66,16 @@ final class WebViewViewController: UIViewController {
     // MARK: - Private Methods
     
     private func loadAuthView() {
-        guard var urlComponents = URLComponents(string: WebViewConstants.unSplashAuthorizeURLString) else {
+        guard var urlComponents = URLComponents(string: APIEndpoints.authorizeURLString) else {
             print("[WebView] ❌ Failed to create URLComponents for authorize URL")
             return
         }
         
         urlComponents.queryItems = [
-            URLQueryItem(name: "client_id", value: APIConstants.accessKey),
-            URLQueryItem(name: "redirect_uri", value: APIConstants.redirectURI),
-            URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "scope", value: APIConstants.accessScope)
+            URLQueryItem(name: APIQueryKeys.clientId, value: APIConstants.accessKey),
+            URLQueryItem(name: APIQueryKeys.redirectURI, value: APIConstants.redirectURI),
+            URLQueryItem(name: APIQueryKeys.responseType, value: APIQueryKeys.responseTypeCode),
+            URLQueryItem(name: APIQueryKeys.scope, value: APIConstants.accessScope)
         ]
         
         guard let url = urlComponents.url else {
@@ -115,9 +111,9 @@ extension WebViewViewController: WKNavigationDelegate {
         if
             let url = navigationAction.request.url,
             let urlComponents = URLComponents(string: url.absoluteString),
-            urlComponents.path == "/oauth/authorize/native",
+            urlComponents.path == APIEndpoints.Paths.oauthAuthorizeNative,
             let items = urlComponents.queryItems,
-            let codeItem = items.first(where: { $0.name == "code" })
+            let codeItem = items.first(where: { $0.name == APIQueryKeys.code })
         {
             return codeItem.value
         } else {

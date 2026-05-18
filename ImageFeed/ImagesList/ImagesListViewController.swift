@@ -99,26 +99,24 @@ extension ImagesListViewController {
 
         cell.setImageState(.loading)
 
-        cell.cellImage.kf.setImage(
-            with: url,
-            placeholder: nil
-        ) { [weak self, weak cell] result in
-            guard let self, let cell else { return }
+        cell.cellImage.kf.setImage(with: url) { [weak self, weak cell] result in
+            guard
+                let self,
+                let cell,
+                let currentIndexPath = self.tableView.indexPath(for: cell),
+                currentIndexPath == indexPath
+            else { return }
 
             switch result {
             case .success(let value):
                 cell.setImageState(.finished(value.image))
-
             case .failure:
                 cell.setImageState(.error)
             }
-
-            self.tableView.reloadRows(at: [indexPath], with: .automatic)
         }
 
         if let date = photo.createdAt {
-            let text = dateFormatter.string(from: date)
-            cell.dateLabel.text = text
+            cell.dateLabel.text = dateFormatter.string(from: date)
         } else {
             cell.dateLabel.text = ""
         }

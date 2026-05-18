@@ -11,7 +11,7 @@ final class ImagesListService {
     
     // MARK: - Public Properties
     
-    static let didChangeNotification = Notification.Name("ImagesListServiceDidChange")
+    static let didChangeNotification = NotificationNames.imagesListDidChange
     
     static let shared = ImagesListService()
     private init() {}
@@ -41,15 +41,14 @@ final class ImagesListService {
             case .success(let photoResults):
                 let newPhotos = photoResults.map { Photo(from: $0) }
                 
-                DispatchQueue.main.async {
-                    self.photos.append(contentsOf: newPhotos)
-                    self.lastLoadedPage = nextPage
-                    self.currentTask = nil
-                    NotificationCenter.default.post(
-                        name: ImagesListService.didChangeNotification,
-                        object: self
-                    )
-                }
+                self.photos.append(contentsOf: newPhotos)
+                self.lastLoadedPage = nextPage
+                self.currentTask = nil
+                NotificationCenter.default.post(
+                    name: ImagesListService.didChangeNotification,
+                    object: self
+                )
+                
                 
             case .failure(let error):
                 DispatchQueue.main.async {
@@ -64,50 +63,49 @@ final class ImagesListService {
     
     func changeLike(photoId: String, isLike: Bool, _ completion: @escaping (Result<Void, Error>) -> Void) {
         guard let token = OAuth2TokenStorage.shared.token else {
-            completion(.failure(NSError(domain: "ImagesListService", code: -1)))
+            completion(.failure(NSError(domain: ErrorDomains.imagesListService, code: -1)))
             return
         }
         
-        guard let url = URL(string: "https://api.unsplash.com/photos/\(photoId)/like") else {
+        guard let url = URL(string: APIEndpoints.likePhotoURLString(photoId: photoId)) else {
             completion(.failure(URLError(.badURL)))
             return
         }
         
         var request = URLRequest(url: url)
-        request.httpMethod = isLike ? "POST" : "DELETE"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.httpMethod = isLike ? HTTPMethod.post.rawValue : HTTPMethod.delete.rawValue
+        request.setValue("\(APIHeaders.bearerPrefix)\(token)", forHTTPHeaderField: APIHeaders.authorization)
         
         let task = urlSession.objectTask(for: request) { [weak self] (result: Result<LikePhotoResult, Error>) in
             guard let self else { return }
-
+            
             switch result {
             case .success:
-                DispatchQueue.main.async {
-                    if let index = self.photos.firstIndex(where: { $0.id == photoId }) {
-                        let photo = self.photos[index]
-
-                        let newPhoto = Photo(
-                            id: photo.id,
-                            size: photo.size,
-                            createdAt: photo.createdAt,
-                            welcomeDescription: photo.welcomeDescription,
-                            thumbImageURL: photo.thumbImageURL,
-                            largeImageURL: photo.largeImageURL,
-                            fullImageURL: photo.fullImageURL,
-                            isLiked: !photo.isLiked
-                        )
-
-                        self.photos[index] = newPhoto
-                    }
-
-                    NotificationCenter.default.post(
-                        name: ImagesListService.didChangeNotification,
-                        object: self
+                if let index = self.photos.firstIndex(where: { $0.id == photoId }) {
+                    let photo = self.photos[index]
+                    
+                    let newPhoto = Photo(
+                        id: photo.id,
+                        size: photo.size,
+                        createdAt: photo.createdAt,
+                        welcomeDescription: photo.welcomeDescription,
+                        thumbImageURL: photo.thumbImageURL,
+                        largeImageURL: photo.largeImageURL,
+                        fullImageURL: photo.fullImageURL,
+                        isLiked: !photo.isLiked
                     )
-
-                    completion(.success(()))
+                    
+                    self.photos[index] = newPhoto
                 }
-
+                
+                NotificationCenter.default.post(
+                    name: ImagesListService.didChangeNotification,
+                    object: self
+                )
+                
+                completion(.success(()))
+                
+                
             case .failure(let error):
                 DispatchQueue.main.async {
                     completion(.failure(error))
@@ -123,16 +121,16 @@ final class ImagesListService {
     private func makePhotosRequest(page: Int) -> URLRequest? {
         guard let token = OAuth2TokenStorage.shared.token else { return nil }
         
-        var components = URLComponents(string: "https://api.unsplash.com/photos")
+        var components = URLComponents(string: APIEndpoints.photosURLString)
         components?.queryItems = [
-            URLQueryItem(name: "page", value: "\(page)"),
-            URLQueryItem(name: "per_page", value: "10")
+            URLQueryItem(name: APIQueryKeys.page, value: "\(page)"),
+            URLQueryItem(name: APIQueryKeys.perPage, value: "\(Defaults.photosPerPage)")
         ]
         
         guard let url = components?.url else { return nil }
         
         var request = URLRequest(url: url)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("\(APIHeaders.bearerPrefix)\(token)", forHTTPHeaderField: APIHeaders.authorization)
         
         return request
     }

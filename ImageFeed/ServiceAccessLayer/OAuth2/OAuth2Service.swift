@@ -19,17 +19,17 @@ final class OAuth2Service {
     private var lastCode: String?
     
     private func makeOAuthTokenRequest(code: String) -> URLRequest? {
-        guard var urlComponents = URLComponents(string: "https://unsplash.com/oauth/token") else {
+        guard var urlComponents = URLComponents(string: APIEndpoints.tokenURLString) else {
             print("[OAuth2Service] ❌ Failed to create URLComponents")
             return nil
         }
         
         urlComponents.queryItems = [
-            URLQueryItem(name: "client_id", value: APIConstants.accessKey),
-            URLQueryItem(name: "client_secret", value: APIConstants.secretKey),
-            URLQueryItem(name: "redirect_uri", value: APIConstants.redirectURI),
-            URLQueryItem(name: "code", value: code),
-            URLQueryItem(name: "grant_type", value: "authorization_code")
+            URLQueryItem(name: APIQueryKeys.clientId, value: APIConstants.accessKey),
+            URLQueryItem(name: APIQueryKeys.clientSecret, value: APIConstants.secretKey),
+            URLQueryItem(name: APIQueryKeys.redirectURI, value: APIConstants.redirectURI),
+            URLQueryItem(name: APIQueryKeys.code, value: code),
+            URLQueryItem(name: APIQueryKeys.grantType, value: APIQueryKeys.grantTypeAuthorizationCode)
         ]
         
         guard let authTokenURL = urlComponents.url else {
@@ -39,8 +39,7 @@ final class OAuth2Service {
         
         print("[OAuth2Service] ✅ OAuth token URL: \(authTokenURL)")
         
-        var request = URLRequest(url: authTokenURL)
-        request.httpMethod = "POST"
+        let request = URLRequest(url: authTokenURL, method: .post)
         return request
     }
     
