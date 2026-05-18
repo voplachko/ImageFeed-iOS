@@ -48,10 +48,7 @@ final class ImagesListCell: UITableViewCell {
             
         case .error:
             hideGradient()
-            let placeholderImage = UIImage(systemName: "person.crop.circle")?
-                .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
-                .withConfiguration(UIImage.SymbolConfiguration(pointSize: 70, weight: .regular, scale: .large))
-            cellImage.image = placeholderImage
+            cellImage.image = UIImage(resource: .imagesListPlaceholder)
             
         case .finished(let image):
             hideGradient()
