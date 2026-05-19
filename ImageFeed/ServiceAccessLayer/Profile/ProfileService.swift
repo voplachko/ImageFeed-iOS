@@ -78,21 +78,26 @@ final class ProfileService {
         self.task = currentTask
         currentTask?.resume()
     }
+    
+    func reset() {
+        task?.cancel()
+        task = nil
+        profile = nil
+    }
 }
 
 private extension ProfileService {
     func makeProfileRequest(token: String) -> URLRequest? {
-        guard let url = URL(string: "https://api.unsplash.com/me") else {
+        guard let url = URL(string: APIEndpoints.meURLString) else {
             return nil
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("v1", forHTTPHeaderField: "Accept-Version")
-        
+        let headers = [
+            APIHeaders.authorization: "\(APIHeaders.bearerPrefix)\(token)",
+            APIHeaders.accept: APIHeaders.applicationJSON,
+            APIHeaders.acceptVersion: APIHeaders.apiVersionV1
+        ]
+        let request = URLRequest(url: url, method: .get, headers: headers)
         return request
     }
 }

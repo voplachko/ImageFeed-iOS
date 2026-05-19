@@ -9,7 +9,7 @@ import Foundation
 
 final class ProfileImageService {
     
-    static let didChangeNotification = Notification.Name("ProfileImageProviderDidChange")
+    static let didChangeNotification = NotificationNames.profileImageDidChange
     
     static let shared = ProfileImageService()
     private init() {}
@@ -23,7 +23,7 @@ final class ProfileImageService {
         task?.cancel()
 
         guard let token = OAuth2TokenStorage.shared.token else {
-            completion(.failure(NSError(domain: "ProfileImageService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authorization token missing"])))
+            completion(.failure(NSError(domain: ErrorDomains.profileImageService, code: 401, userInfo: [NSLocalizedDescriptionKey: "Authorization token missing"])))
             return
         }
 
@@ -43,7 +43,7 @@ final class ProfileImageService {
                     .post(
                         name: ProfileImageService.didChangeNotification,
                         object: self,
-                        userInfo: ["URL": self.avatarURL ?? ""]
+                        userInfo: [UserInfoKeys.url: self.avatarURL ?? ""]
                     )
 
             case .failure(let error):
@@ -57,15 +57,22 @@ final class ProfileImageService {
     }
     
     private func makeProfileImageRequest(username: String, token: String) -> URLRequest? {
-        guard let url = URL(string: "https://api.unsplash.com/users/\(username)") else {
+        guard let url = URL(string: APIEndpoints.userURLString(username: username)) else {
             return nil
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("v1", forHTTPHeaderField: "Accept-Version")
+        let headers = [
+            APIHeaders.authorization: "\(APIHeaders.bearerPrefix)\(token)",
+            APIHeaders.accept: APIHeaders.applicationJSON,
+            APIHeaders.acceptVersion: APIHeaders.apiVersionV1
+        ]
+        let request = URLRequest(url: url, method: .get, headers: headers)
         return request
+    }
+    
+    func reset() {
+        task?.cancel()
+        task = nil
+        avatarURL = nil
     }
 }
