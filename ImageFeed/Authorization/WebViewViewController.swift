@@ -8,7 +8,15 @@
 import UIKit
 import WebKit
 
-final class WebViewViewController: UIViewController {
+public protocol WebViewViewControllerProtocol: AnyObject {
+    var presenter: WebViewPresenterProtocol? { get set }
+
+    func load(request: URLRequest)
+    func setProgressValue(_ newValue: Float)
+    func setProgressHidden(_ isHidden: Bool)
+}
+
+final class WebViewViewController: UIViewController, WebViewViewControllerProtocol {
     
     // MARK: - IBOutlets
     
@@ -18,6 +26,7 @@ final class WebViewViewController: UIViewController {
     // MARK: - Properties
     
     weak var delegate: WebViewViewControllerDelegate?
+    var presenter: WebViewPresenterProtocol?
     private var estimatedProgressObservation: NSKeyValueObservation?
     
     // MARK: - Lifecycle
@@ -27,19 +36,15 @@ final class WebViewViewController: UIViewController {
         
         setupWebView()
         setupProgressObservation()
+        webView.accessibilityIdentifier = "UnsplashWebView"
         
-        loadAuthView()
-        updateProgress()
+        presenter?.viewDidLoad()
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        updateProgress()
-    }
-    
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
+        presenter?.didUpdateProgressValue(webView.estimatedProgress)
     }
     
     // MARK: - Setup
@@ -52,8 +57,8 @@ final class WebViewViewController: UIViewController {
         estimatedProgressObservation = webView.observe(
             \.estimatedProgress,
             options: [.new]
-        ) { [weak self] _, _ in
-            self?.updateProgress()
+        ) { [weak self] webView, _ in
+            self?.presenter?.didUpdateProgressValue(webView.estimatedProgress)
         }
     }
     
@@ -65,32 +70,18 @@ final class WebViewViewController: UIViewController {
     
     // MARK: - Private Methods
     
-    private func loadAuthView() {
-        guard var urlComponents = URLComponents(string: APIEndpoints.authorizeURLString) else {
-            print("[WebView] ❌ Failed to create URLComponents for authorize URL")
-            return
-        }
-        
-        urlComponents.queryItems = [
-            URLQueryItem(name: APIQueryKeys.clientId, value: APIConstants.accessKey),
-            URLQueryItem(name: APIQueryKeys.redirectURI, value: APIConstants.redirectURI),
-            URLQueryItem(name: APIQueryKeys.responseType, value: APIQueryKeys.responseTypeCode),
-            URLQueryItem(name: APIQueryKeys.scope, value: APIConstants.accessScope)
-        ]
-        
-        guard let url = urlComponents.url else {
-            print("[WebView] ❌ Failed to create authorize URL")
-            return
-        }
-        
-        let request = URLRequest(url: url)
+    func load(request: URLRequest) {
         webView.load(request)
     }
-    
-    private func updateProgress() {
-        progressView.progress = Float(webView.estimatedProgress)
-        progressView.isHidden = fabs(webView.estimatedProgress - 1.0) <= 0.0001
+
+    func setProgressValue(_ newValue: Float) {
+        progressView.progress = newValue
     }
+
+    func setProgressHidden(_ isHidden: Bool) {
+        progressView.isHidden = isHidden
+    }
+
 }
 
 extension WebViewViewController: WKNavigationDelegate {
@@ -108,17 +99,8 @@ extension WebViewViewController: WKNavigationDelegate {
     }
     
     private func code(from navigationAction: WKNavigationAction) -> String? {
-        if
-            let url = navigationAction.request.url,
-            let urlComponents = URLComponents(string: url.absoluteString),
-            urlComponents.path == APIEndpoints.Paths.oauthAuthorizeNative,
-            let items = urlComponents.queryItems,
-            let codeItem = items.first(where: { $0.name == APIQueryKeys.code })
-        {
-            return codeItem.value
-        } else {
-            return nil
-        }
+        guard let url = navigationAction.request.url else { return nil }
+        return presenter?.code(from: url)
     }
 }
 

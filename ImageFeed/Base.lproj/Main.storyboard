@@ -197,6 +197,7 @@
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="tZj-lf-Vae" userLabel="Back Button">
                                 <rect key="frame" x="8" y="54" width="48" height="48"/>
+                                <accessibility key="accessibilityConfiguration" identifier="nav back button white"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="48" id="Xek-mX-yhI"/>
                                     <constraint firstAttribute="width" constant="48" id="eiP-OJ-b81"/>
@@ -223,6 +224,7 @@
                     </view>
                     <navigationItem key="navigationItem" id="Y19-jl-Glg"/>
                     <connections>
+                        <outlet property="backButton" destination="tZj-lf-Vae" id="icB-cE-ste"/>
                         <outlet property="imageView" destination="mJe-sx-pXD" id="IOT-SE-mAQ"/>
                         <outlet property="scrollView" destination="Dlo-6n-Lme" id="Vng-SD-V8i"/>
                     </connections>

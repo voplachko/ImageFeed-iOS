@@ -26,6 +26,7 @@ final class AuthViewController: UIViewController {
         button.setTitleColor(UIColor(resource: .ypBlack), for: .normal)
         button.backgroundColor = .white
         button.layer.cornerRadius = 16
+        button.accessibilityIdentifier = "Authenticate"
         return button
     }()
 
@@ -97,6 +98,10 @@ extension AuthViewController {
             return
         }
 
+        let authHelper = AuthHelper()
+        let webViewPresenter = WebViewPresenter(authHelper: authHelper)
+        webViewViewController.presenter = webViewPresenter
+        webViewPresenter.view = webViewViewController
         webViewViewController.delegate = self
         webViewViewController.modalPresentationStyle = .pageSheet
 
