@@ -8,6 +8,13 @@
 import UIKit
 import Kingfisher
 
+protocol ProfileViewControllerProtocol: AnyObject {
+    func showProfileDetails(name: String, loginName: String, bio: String)
+    func updateAvatar(with url: String?)
+    func showLogoutAlert()
+    func switchToSplashScreen()
+}
+
 final class ProfileViewController: UIViewController {
     
     // MARK: - UI
@@ -29,6 +36,7 @@ final class ProfileViewController: UIViewController {
                 .withRenderingMode(.alwaysOriginal),
             for: .normal
         )
+        button.accessibilityIdentifier = "logout button"
         return button
     }()
     
@@ -58,13 +66,24 @@ final class ProfileViewController: UIViewController {
     }()
     
     private var profileImageServiceObserver: NSObjectProtocol?
-    
     private var gradientViews: [AnimatedGradientView] = []
+    private var presenter: ProfilePresenterProtocol?
+
+    // MARK: - Configuration
+
+    func configure(_ presenter: ProfilePresenterProtocol) {
+        self.presenter = presenter
+        presenter.view = self
+    }
     
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        if presenter == nil {
+            configure(ProfilePresenter())
+        }
         
         configureView()
         addSubviews()
@@ -73,9 +92,8 @@ final class ProfileViewController: UIViewController {
         view.layoutIfNeeded()
         showLoadingAnimation()
 
-        configureContent()
         setupActions()
-        updateAvatar()
+        presenter?.viewDidLoad()
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -135,38 +153,15 @@ extension ProfileViewController {
         ])
     }
     
-    private func updateProfileDetails(profile: Profile) {
-        nameLabel.text = profile.name.isEmpty
-        ? "Имя не указано"
-        : profile.name
-        nicknameLabel.text = profile.loginName.isEmpty
-        ? "@unknown_user"
-        : profile.loginName
-        descriptionLabel.text = (profile.bio?.isEmpty ?? true)
-        ? "Профиль не заполнен"
-        : profile.bio
-    }
-    
-    func configureContent() {
-        guard let profile = ProfileService.shared.profile else {
-            print("[ProfileViewController] ❌ No profile data")
-            return
-        }
-        
-        updateProfileDetails(profile: profile)
-    }
-    
     func setupActions() {
         exitButton.addTarget(self, action: #selector(didTapExitButton), for: .touchUpInside)
     }
     
-    private func updateAvatar() {
+    private func loadAvatar(with profileImageURL: String?) {
         guard
-            let profileImageURL = ProfileImageService.shared.avatarURL,
+            let profileImageURL,
             let imageUrl = URL(string: profileImageURL)
         else { return }
-        
-        print("imageUrl: \(imageUrl)")
         
         let placeholderImage = UIImage(systemName: "person.crop.circle")?
             .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
@@ -182,43 +177,14 @@ extension ProfileViewController {
                 .scaleFactor(UIScreen.main.scale),
                 .cacheOriginalImage,
                 .forceRefresh
-            ]) { result in
-                
-                self.hideLoadingAnimation()
-                
-                switch result {
-                case .success(let value):
-                    print(value.image)
-                    print(value.cacheType)
-                    print(value.source)
-                case .failure(let error):
-                    print(error)
-                }
+            ]) { [weak self] _ in
+                self?.hideLoadingAnimation()
             }
     }
     
     @objc
     private func didTapExitButton() {
-        let alert = UIAlertController(
-            title: "Пока, пока!",
-            message: "Уверены, что хотите выйти?",
-            preferredStyle: .alert
-        )
-        
-        alert.addAction(UIAlertAction(title: "Да", style: .destructive) { _ in
-            ProfileLogoutService.shared.logout()
-            
-            guard let window = UIApplication.shared.windows.first else {
-                return
-            }
-            
-            let splashViewController = SplashViewController()
-            window.rootViewController = splashViewController
-        })
-        
-        alert.addAction(UIAlertAction(title: "Нет", style: .cancel))
-        
-        present(alert, animated: true)
+        presenter?.didTapExitButton()
     }
     
     private func showLoadingAnimation() {
@@ -251,5 +217,42 @@ extension ProfileViewController {
             $0.removeFromSuperview()
         }
         gradientViews.removeAll()
+    }
+}
+
+extension ProfileViewController: ProfileViewControllerProtocol {
+    func showProfileDetails(name: String, loginName: String, bio: String) {
+        nameLabel.text = name
+        nicknameLabel.text = loginName
+        descriptionLabel.text = bio
+    }
+
+    func updateAvatar(with url: String?) {
+        loadAvatar(with: url)
+    }
+
+    func showLogoutAlert() {
+        let alert = UIAlertController(
+            title: "Пока, пока!",
+            message: "Уверены, что хотите выйти?",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Да", style: .destructive) { [weak self] _ in
+            self?.presenter?.logout()
+        })
+        
+        alert.addAction(UIAlertAction(title: "Нет", style: .cancel))
+        
+        present(alert, animated: true)
+    }
+
+    func switchToSplashScreen() {
+        guard let window = UIApplication.shared.windows.first else {
+            return
+        }
+        
+        let splashViewController = SplashViewController()
+        window.rootViewController = splashViewController
     }
 }
